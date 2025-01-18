@@ -20,8 +20,8 @@
 	branch = master
 [submodule "LiveSplit/Components/LiveSplit.ManualGameTime"]
 	path = components/LiveSplit.ManualGameTime
-	url = https://github.com/LiveSplit/LiveSplit.ManualGameTime.git
-	branch = master
+	url = https://github.com/justsaft/LiveSplit.ManualGameTime
+	branch = https://github.com/justsaft/LiveSplit.ManualGameTime
 [submodule "LiveSplit/Components/LiveSplit.PossibleTimeSave"]
 	path = components/LiveSplit.PossibleTimeSave
 	url = https://github.com/LiveSplit/LiveSplit.PossibleTimeSave.git
@@ -71,7 +71,8 @@
 	url = https://github.com/LiveSplit/LiveSplit.Subsplits
 [submodule "LiveSplit/Components/LiveSplit.WorldRecord"]
 	path = components/LiveSplit.WorldRecord
-	url = https://github.com/LiveSplit/LiveSplit.WorldRecord.git
+	url = https://github.com/justsaft/LiveSplit.WorldRecord
+	branch = https://github.com/justsaft/LiveSplit.WorldRecord
 [submodule "LiveSplit/Libs/SpeedrunComSharp"]
 	path = lib/SpeedrunComSharp
 	url = https://github.com/LiveSplit/SpeedrunComSharp.git
@@ -102,10 +103,9 @@
 	url = https://github.com/LiveSplit/LiveSplit.ComparisonTime.git
 [submodule "components/LiveSplit.AlternateTimingMethod"]
 	path = components/LiveSplit.AlternateTimingMethod
-	url = https://github.com/Dalet/LiveSplit.AlternateTimingMethod
+	url = https://github.com/justsaft/LiveSplit.AlternateTimingMethod
+	branch = https://github.com/justsaft/LiveSplit.AlternateTimingMethod
 [submodule "components/LiveSplit.TimeAttackPause"]
 	path = components/LiveSplit.TimeAttackPause
-	url = https://github.com/Shotnex4/LiveSplit.TimeAttackPause
-[submodule "lib/Newtonsoft.Json"]
-	path = lib/Newtonsoft.Json
-	url = https://github.com/JamesNK/Newtonsoft.Json
+	url = https://github.com/justsaft/LiveSplit.TimeAttackPause
+	branch = https://github.com/justsaft/LiveSplit.TimeAttackPause
