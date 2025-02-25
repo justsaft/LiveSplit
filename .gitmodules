@@ -91,21 +91,19 @@
 	branch = stable
 [submodule "LiveSplit/Components/LiveSplit.AutoSplittingRuntime"]
 	path = components/LiveSplit.AutoSplittingRuntime
-	url = https://github.com/LiveSplit/LiveSplit.AutoSplittingRuntime.git
+	url = https://github.com/JustSaft/LiveSplit.AutoSplittingRuntime.git
 [submodule "LiveSplit/Libs/livesplit-core"]
 	path = lib/livesplit-core
 	url = https://github.com/LiveSplit/livesplit-core.git
 [submodule "LiveSplit/Components/LiveSplit.TheRun"]
 	path = components/LiveSplit.TheRun
 	url = https://github.com/therungg/LiveSplit.TheRun
-[submodule "components/LiveSplit.ComparisonTime"]
+[submodule "LiveSplit/Components/LiveSplit.ComparisonTime"]
 	path = components/LiveSplit.ComparisonTime
 	url = https://github.com/LiveSplit/LiveSplit.ComparisonTime.git
-[submodule "components/LiveSplit.AlternateTimingMethod"]
+[submodule "LiveSplit/Components/LiveSplit.AlternateTimingMethod"]
 	path = components/LiveSplit.AlternateTimingMethod
 	url = https://github.com/justsaft/LiveSplit.AlternateTimingMethod
-	branch = https://github.com/justsaft/LiveSplit.AlternateTimingMethod
-[submodule "components/LiveSplit.TimeAttackPause"]
+[submodule "LiveSplit/Components/LiveSplit.TimeAttackPause"]
 	path = components/LiveSplit.TimeAttackPause
 	url = https://github.com/justsaft/LiveSplit.TimeAttackPause
-	branch = https://github.com/justsaft/LiveSplit.TimeAttackPause
