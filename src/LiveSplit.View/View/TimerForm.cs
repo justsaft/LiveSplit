@@ -61,11 +61,11 @@ public partial class TimerForm : Form
     protected Invalidator Invalidator { get; set; }
     protected bool InTimerOnlyMode { get; set; }
 
-    private Image previousBackground { get; set; }
-    private float previousOpacity { get; set; }
-    private float previousBlur { get; set; }
-    private Image blurredBackground { get; set; }
-    private Image bakedBackground { get; set; }
+    private Image PreviousBackground { get; set; }
+    private float PreviousOpacity { get; set; }
+    private float PreviousBlur { get; set; }
+    private Image BlurredBackground { get; set; }
+    private Image BakedBackground { get; set; }
 
     public CommandServer Server { get; set; }
     public bool ServerStarted { get; protected set; } = false;
@@ -80,7 +80,7 @@ public partial class TimerForm : Form
 
     protected float TotalPosition { get; set; }
 
-    private bool DontRedraw = false;
+    private bool _dontRedraw = false;
 
     protected Region UpdateRegion { get; set; }
 
@@ -101,16 +101,16 @@ public partial class TimerForm : Form
         }
     }
 
-    protected bool MouseIsDown = false;
-    protected Point MousePoint;
+    protected bool _mouseIsDown = false;
+    protected Point _mousePoint;
 
-    private readonly List<Action> RacesToRefresh = [];
-    private bool ShouldRefreshRaces = false;
+    private readonly List<Action> _racesToRefresh = [];
+    private bool _shouldRefreshRaces = false;
 
     protected Task RefreshTask { get; set; }
     protected bool InvalidationRequired { get; set; }
 
-    public string BasePath { get; set; }
+    public readonly static string RuntimeFolder = Directory.GetCurrentDirectory();
     protected IEnumerable<RaceProviderAPI> RaceProvider { get; set; }
 
     private bool MousePassThrough
@@ -124,12 +124,12 @@ public partial class TimerForm : Form
 
             // If we're trying to set to false and it's already false, don't bother doing anything.
             // We can't do this for setting to true because setting Opacity may have messed the GWL_EXSTYLE flags up.
-            if (!value && !MousePassThroughState)
+            if (!value && !_mousePassThroughState)
             {
                 return;
             }
 
-            MousePassThroughState = value;
+            _mousePassThroughState = value;
 
             uint prevWindowLong = GetWindowLong(Handle, GWL_EXSTYLE);
             if (value)
@@ -150,7 +150,7 @@ public partial class TimerForm : Form
             }
         }
     }
-    private bool MousePassThroughState = false;
+    private bool _mousePassThroughState = false;
 
     private bool IsForegroundWindow => GetForegroundWindow() == Handle;
 
@@ -162,18 +162,18 @@ public partial class TimerForm : Form
     [DllImport("gdi32.dll")]
     private static extern IntPtr CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
 
-    [DllImport("user32")]
+    [DllImport("user32.dll")]
     private static extern uint SetWindowLong(IntPtr hwnd, int nIndex, uint dwNewLong);
 
-    [DllImport("user32")]
+    [DllImport("user32.dll")]
     private static extern uint GetWindowLong(IntPtr hwnd, int nIndex);
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
 
-    public TimerForm(string splitsPath = null, string layoutPath = null, string basePath = "")
+    public TimerForm(string splitsPath = null, string layoutPath = null/* , string basePath = "" */)
     {
-        BasePath = basePath;
+        // BasePath = basePath;
         InitializeComponent();
         Init(splitsPath, layoutPath);
     }
@@ -190,7 +190,7 @@ public partial class TimerForm : Form
         Invalidator = new Invalidator(this);
         SetStyle(ControlStyles.SupportsTransparentBackColor, true);
 
-        ComponentManager.BasePath = BasePath;
+        //ComponentManager.BasePath = BasePath;
 
         CurrentState = new LiveSplitState(null, this, null, null, null);
 
@@ -445,11 +445,11 @@ public partial class TimerForm : Form
         // Invalidate the entire form at least once per second, to avoid parts of the form not being redrawn when necessary in some cases
         InvalidationRequired = true;
 
-        if (ShouldRefreshRaces)
+        if (_shouldRefreshRaces)
         {
-            for (int i = 0; i < RacesToRefresh.Count; i++)
+            for (int i = 0; i < _racesToRefresh.Count; i++)
             {
-                Action updateTitleAction = RacesToRefresh[i];
+                Action updateTitleAction = _racesToRefresh[i];
                 updateTitleAction();
             }
         }
@@ -548,7 +548,7 @@ public partial class TimerForm : Form
 
             UpdateTitle(tsItem, race, startTime, gameAndGoal);
 
-            RacesToRefresh.Add(updateTitleAction);
+            _racesToRefresh.Add(updateTitleAction);
 
             tsItem.Click += (s, ev) =>
             {
@@ -831,7 +831,7 @@ public partial class TimerForm : Form
 
     protected void SetInTimerOnlyMode()
     {
-        if (Layout.Components.Count() != 1 || Layout.Components.FirstOrDefault().ComponentName != "Timer")
+        if (Layout.Components.Count() != 1 || Layout.Components.First().ComponentName != "Timer")
         {
             InTimerOnlyMode = false;
         }
@@ -1085,17 +1085,17 @@ public partial class TimerForm : Form
                     catch (Exception ex)
                     {
                         Log.Error(ex);
-                        DontRedraw = true;
+                        _dontRedraw = true;
                         MessageBox.Show(this, "The selected file was not recognized as a layout file. (" + ex.Message + ")", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        DontRedraw = false;
+                        _dontRedraw = false;
                     }
                 }
                 catch (Exception ex)
                 {
                     Log.Error(ex);
-                    DontRedraw = true;
+                    _dontRedraw = true;
                     MessageBox.Show(this, "The layout file couldn't be downloaded.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    DontRedraw = false;
+                    _dontRedraw = false;
                 }
             }
         }
@@ -1274,7 +1274,7 @@ public partial class TimerForm : Form
                         CurrentState.Run.AutoSplitter.Component.Update(null, CurrentState, 0, 0, Layout.Mode);
                     }
 
-                    if (DontRedraw)
+                    if (_dontRedraw)
                     {
                         return;
                     }
@@ -1494,9 +1494,9 @@ public partial class TimerForm : Form
         {
             if (Layout.Settings.BackgroundImage != null)
             {
-                if (Layout.Settings.BackgroundImage != previousBackground
-                    || Layout.Settings.ImageOpacity != previousOpacity
-                    || Layout.Settings.ImageBlur != previousBlur)
+                if (Layout.Settings.BackgroundImage != PreviousBackground
+                    || Layout.Settings.ImageOpacity != PreviousOpacity
+                    || Layout.Settings.ImageBlur != PreviousBlur)
                 {
                     CreateBakedBackground();
                 }
@@ -1504,7 +1504,7 @@ public partial class TimerForm : Form
                 foreach (RectangleF rectangle in UpdateRegion.GetRegionScans(g.Transform))
                 {
                     var rect = Rectangle.Round(rectangle);
-                    g.DrawImage(bakedBackground, rect, rect, GraphicsUnit.Pixel);
+                    g.DrawImage(BakedBackground, rect, rect, GraphicsUnit.Pixel);
                 }
             }
         }
@@ -1535,14 +1535,14 @@ public partial class TimerForm : Form
         {
             if (blur > 0)
             {
-                if (blur != previousBlur || image != previousBackground)
+                if (blur != PreviousBlur || image != PreviousBackground)
                 {
-                    blurredBackground?.Dispose();
+                    BlurredBackground?.Dispose();
 
-                    blurredBackground = ImageBlur.Generate(image, blur * 10);
+                    BlurredBackground = ImageBlur.Generate(image, blur * 10);
                 }
 
-                image = blurredBackground;
+                image = BlurredBackground;
             }
 
             float croppedWidth = image.Width;
@@ -1579,12 +1579,12 @@ public partial class TimerForm : Form
                     attributes);
             }
 
-            bakedBackground?.Dispose();
+            BakedBackground?.Dispose();
 
-            bakedBackground = bitmap;
-            previousBackground = Layout.Settings.BackgroundImage;
-            previousOpacity = opacity;
-            previousBlur = blur;
+            BakedBackground = bitmap;
+            PreviousBackground = Layout.Settings.BackgroundImage;
+            PreviousOpacity = opacity;
+            PreviousBlur = blur;
         }
     }
 
@@ -1592,17 +1592,17 @@ public partial class TimerForm : Form
     {
         if (e.Button == MouseButtons.Left)
         {
-            MousePoint = new Point(e.X, e.Y);
-            MouseIsDown = true;
+            _mousePoint = new Point(e.X, e.Y);
+            _mouseIsDown = true;
         }
     }
 
     private void TimerForm_MouseMove(object sender, MouseEventArgs e)
     {
-        if (MouseIsDown)
+        if (_mouseIsDown)
         {
-            int x = Location.X - MousePoint.X + e.Location.X;
-            int y = Location.Y - MousePoint.Y + e.Location.Y;
+            int x = Location.X - _mousePoint.X + e.Location.X;
+            int y = Location.Y - _mousePoint.Y + e.Location.Y;
             Location = new Point(x, y);
         }
     }
@@ -1611,13 +1611,13 @@ public partial class TimerForm : Form
     {
         if (e.Button == MouseButtons.Left)
         {
-            MouseIsDown = false;
+            _mouseIsDown = false;
         }
 
         if (e.Button == MouseButtons.Right)
         {
             RightClickMenu.Show(this, e.Location);
-            MouseIsDown = false;
+            _mouseIsDown = false;
         }
     }
 
@@ -1952,9 +1952,9 @@ public partial class TimerForm : Form
         catch (Exception e)
         {
             Log.Error(e);
-            DontRedraw = true;
+            _dontRedraw = true;
             MessageBox.Show(this, "The selected file was not recognized as a splits file.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            DontRedraw = false;
+            _dontRedraw = false;
         }
 
         Cursor.Current = Cursors.Arrow;
@@ -2050,9 +2050,9 @@ public partial class TimerForm : Form
             || CurrentState.CurrentPhase == TimerPhase.Running
             || CurrentState.CurrentPhase == TimerPhase.Paused))
         {
-            DontRedraw = true;
+            _dontRedraw = true;
             result = MessageBox.Show(this, "This run did not beat your current splits. Would you like to save this run as a Personal Best?", "Save as Personal Best?", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-            DontRedraw = false;
+            _dontRedraw = false;
             if (result == DialogResult.Yes)
             {
                 Model.ResetAndSetAttemptAsPB();
@@ -2468,9 +2468,9 @@ public partial class TimerForm : Form
             catch (Exception e)
             {
                 Log.Error(e);
-                DontRedraw = true;
+                _dontRedraw = true;
                 MessageBox.Show(this, "The selected file was not recognized as a layout file. (" + e.Message + ")", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                DontRedraw = false;
+                _dontRedraw = false;
             }
 
             Cursor.Current = Cursors.Arrow;
@@ -2635,7 +2635,7 @@ public partial class TimerForm : Form
         {
             try
             {
-                DontRedraw = true;
+                _dontRedraw = true;
                 DialogResult result = MessageBox.Show(this, "Your splits have been updated but not yet saved.\nDo you want to save your splits now?", "Save Splits?", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
                 if (result == DialogResult.Yes)
                 {
@@ -2648,7 +2648,7 @@ public partial class TimerForm : Form
             }
             finally
             {
-                DontRedraw = false;
+                _dontRedraw = false;
             }
         }
 
@@ -2667,7 +2667,7 @@ public partial class TimerForm : Form
         {
             try
             {
-                DontRedraw = true;
+                _dontRedraw = true;
                 MessageBoxButtons buttons = canCancel ? MessageBoxButtons.YesNoCancel : MessageBoxButtons.YesNo;
                 DialogResult result = MessageBox.Show(this, "Your layout has been updated but not yet saved.\nDo you want to save your layout now?", "Save Layout?", buttons, MessageBoxIcon.Question);
                 if (result == DialogResult.Yes)
@@ -2681,7 +2681,7 @@ public partial class TimerForm : Form
             }
             finally
             {
-                DontRedraw = false;
+                _dontRedraw = false;
             }
         }
 
@@ -2707,7 +2707,7 @@ public partial class TimerForm : Form
 
         try
         {
-            string settingsPath = Path.Combine(BasePath, SETTINGS_PATH);
+            string settingsPath = Path.Combine(RuntimeFolder, SETTINGS_PATH);
             if (!File.Exists(settingsPath))
             {
                 File.Create(settingsPath).Close();
@@ -2780,10 +2780,10 @@ public partial class TimerForm : Form
     {
         try
         {
-            string settingsPath = Path.Combine(BasePath, SETTINGS_PATH);
+            string settingsPath = Path.Combine(RuntimeFolder, SETTINGS_PATH);
             if (File.Exists(settingsPath))
             {
-                using FileStream stream = File.OpenRead(Path.Combine(BasePath, SETTINGS_PATH));
+                using FileStream stream = File.OpenRead(Path.Combine(RuntimeFolder, SETTINGS_PATH));
                 Settings = new XMLSettingsFactory(stream).Create();
                 return;
             }
@@ -2880,9 +2880,9 @@ public partial class TimerForm : Form
 
         if (warnUser)
         {
-            DontRedraw = true;
+            _dontRedraw = true;
             DialogResult result = MessageBox.Show(this, "You have beaten some of your best times.\r\nDo you want to update them?", "Update Times?", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-            DontRedraw = false;
+            _dontRedraw = false;
             return result;
         }
 
@@ -2923,12 +2923,12 @@ public partial class TimerForm : Form
     {
         var raceProvider = (RaceProviderAPI)(sender as ToolStripMenuItem)?.Tag;
         raceProvider?.RefreshRacesListAsync();
-        ShouldRefreshRaces = true;
+        _shouldRefreshRaces = true;
     }
 
     private void racingMenuItem_MouseLeave(object sender, EventArgs e)
     {
-        ShouldRefreshRaces = false;
+        _shouldRefreshRaces = false;
     }
 
     private void resetMenuItem_Click(object sender, EventArgs e)
