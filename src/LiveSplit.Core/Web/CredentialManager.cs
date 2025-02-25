@@ -1,203 +1,340 @@
-﻿/*
-
-MIT License
-
-Copyright(c) 2017 Gérald Barré
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-*/
-
+﻿
 using System;
-using System.ComponentModel;
 using System.Runtime.InteropServices;
-using System.Text;
-
-using Microsoft.Win32.SafeHandles;
+using System.Reflection;
+using System.Diagnostics;
+using System.IO;
 
 namespace LiveSplit.Web;
 
-public static class CredentialManager
+public class CredentialManager
 {
-    public static Credential ReadCredential(string applicationName)
+    public static Credential ReadCredential(string secret_identifier)
     {
-        bool read = CredRead(applicationName, CredentialType.Generic, 0, out IntPtr nCredPtr);
-        if (read)
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            using var critCred = new CriticalCredentialHandle(nCredPtr);
-            CREDENTIAL cred = critCred.GetCredential();
-            return ReadCredential(cred);
+            return ReadCredential_Windows(secret_identifier);
         }
-
-        return null;
-    }
-
-    private static Credential ReadCredential(CREDENTIAL credential)
-    {
-        string applicationName = Marshal.PtrToStringUni(credential.TargetName);
-        string userName = Marshal.PtrToStringUni(credential.UserName);
-        string secret = null;
-        if (credential.CredentialBlob != IntPtr.Zero)
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            secret = Marshal.PtrToStringUni(credential.CredentialBlob, (int)credential.CredentialBlobSize / 2);
-        }
-
-        return new Credential(credential.Type, applicationName, userName, secret);
-    }
-
-    public static void WriteCredential(string applicationName, string userName, string secret)
-    {
-        byte[] byteArray = secret == null ? null : Encoding.Unicode.GetBytes(secret);
-        // XP and Vista: 512;
-        // 7 and above: 5*512
-        if (Environment.OSVersion.Version < new Version(6, 1) /* Windows 7 */)
-        {
-            if (byteArray != null && byteArray.Length > 512)
-            {
-                throw new ArgumentOutOfRangeException("secret", "The secret message has exceeded 512 bytes.");
-            }
+            return ReadCredential_Linux(secret_identifier);
         }
         else
         {
-            if (byteArray != null && byteArray.Length > 512 * 5)
+            throw new PlatformNotSupportedException("This platform is not supported.");
+        }
+    }
+
+    public static void WriteCredential(string secret_identifier, string user_name, string secret)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            WriteCredential_Windows(secret_identifier, user_name, secret);
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            WriteCredential_Linux(secret_identifier, user_name, secret);
+        }
+        else
+        {
+            throw new PlatformNotSupportedException("This platform is not supported.");
+        }
+    }
+
+    public static bool CredentialExists(string secret_identifier)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return CredentialExists_Windows(secret_identifier);
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            return CredentialExists_Linux(secret_identifier);
+        }
+        else
+        {
+            throw new PlatformNotSupportedException("This platform is not supported.");
+        }
+    }
+
+    public static void DeleteCredential(string secret_identifier)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            DeleteWindowsCredential(secret_identifier);
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            DeleteCredential_Linux(secret_identifier);
+        }
+        else
+        {
+            throw new PlatformNotSupportedException("This platform is not supported.");
+        }
+    }
+
+    #region Windows Implementation
+    private static Credential ReadCredential_Windows(string secret_identifier)
+    {
+        // Windows implementation using CredentialManagerInterop
+        using var credentialManager = new CredentialManagerInterop();
+        ICredential credential = credentialManager.GetCredential(secret_identifier);
+        return new Credential(
+            CredentialType.Generic,
+            secret_identifier,
+            credential.UserName,
+            credential.Password
+        );
+    }
+
+    private static void WriteCredential_Windows(string secret_identifier, string user_name, string secret)
+    {
+        using var credentialManager = new CredentialManagerInterop();
+        credentialManager.SaveCredential_Windows(new Credential
+        (
+            CredentialType.Generic,
+            secret_identifier,
+            user_name,
+            secret
+        ));
+    }
+
+    private static bool CredentialExists_Windows(string secret_identifier)
+    {
+        using var credentialManager = new CredentialManagerInterop();
+        return credentialManager.GetCredential(secret_identifier) != null;
+    }
+
+    private static void DeleteWindowsCredential(string applicationName)
+    {
+        using var credentialManager = new CredentialManagerInterop();
+        credentialManager.DeleteCredential_Windows(applicationName);
+    }
+
+    private sealed class CredentialManagerInterop : IDisposable
+    {
+        private readonly object _credentialManager;
+
+        public CredentialManagerInterop()
+        {
+            _credentialManager = Activator.CreateInstance(
+                Type.GetTypeFromCLSID(new Guid("00000100-0000-0000-C000-000000000046")),
+                true
+            );
+        }
+
+        public void Dispose()
+        {
+            Marshal.ReleaseComObject(_credentialManager);
+        }
+
+        public ICredential GetCredential(string applicationName)
+        {
+            return (ICredential)_credentialManager.GetType().InvokeMember(
+                "GetCredential",
+                BindingFlags.InvokeMethod,
+                null,
+                _credentialManager,
+                new object[] { applicationName, false }
+            );
+        }
+
+        public void SaveCredential_Windows(Credential credential)
+        {
+            var credentialInterface = (ICredential)_credentialManager.GetType().InvokeMember(
+                "CreateCredential",
+                BindingFlags.InvokeMethod,
+                null,
+                _credentialManager,
+                new object[] { credential.ApplicationName, credential.UserName, credential.Password }
+            );
+
+            _credentialManager.GetType().InvokeMember(
+                "SaveCredential",
+                BindingFlags.InvokeMethod,
+                null,
+                _credentialManager,
+                new object[] { credentialInterface, true }
+            );
+        }
+
+        public void DeleteCredential_Windows(string applicationName)
+        {
+            _credentialManager.GetType().InvokeMember(
+                "DeleteCredential",
+                BindingFlags.InvokeMethod,
+                null,
+                _credentialManager,
+                new object[] { applicationName }
+            );
+        }
+    }
+
+    [ComImport, Guid("00000101-0000-0000-C000-000000000046")]
+    private interface ICredential
+    {
+        [DispId(1)] string TargetName { get; }
+        [DispId(2)] string UserName { get; }
+        [DispId(3)] string Password { get; }
+    }
+    #endregion
+
+    #region Linux Implementation
+    private static Credential ReadCredential_Linux(string applicationName)
+    {
+        // Linux implementation using SecretStorage
+        SecretStorage.Secret secret = SecretStorage.GetSecret(applicationName);
+        if (secret == null)
+        {
+            return null;
+        }
+
+        return new Credential(
+            CredentialType.Generic,
+            applicationName,
+            secret.Username,
+            secret.Password
+        );
+    }
+
+    private static void WriteCredential_Linux(string applicationName, string userName, string secret)
+    {
+        SecretStorage.SetSecret(applicationName, userName, secret);
+    }
+
+    private static bool CredentialExists_Linux(string applicationName)
+    {
+        return SecretStorage.GetSecret(applicationName) != null;
+    }
+
+    private static void DeleteCredential_Linux(string applicationName)
+    {
+        SecretStorage.DeleteSecret(applicationName);
+    }
+
+    private static class SecretStorage
+    {
+        public static Secret GetSecret(string applicationName)
+        {
+            var process = new Process
             {
-                throw new ArgumentOutOfRangeException("secret", "The secret message has exceeded 2560 bytes.");
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "secret-tool",
+                    Arguments = $"search --username {applicationName}",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                }
+            };
+
+            try
+            {
+                process.Start();
+            }
+            catch (FileNotFoundException)
+            {
+                throw new NoLibsecretException();
+            }
+
+            string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+            {
+                return null;
+            }
+
+            string[] lines = output.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            var secret = new Secret();
+
+            foreach (string line in lines)
+            {
+                string[] parts = line.Split(new[] { '\t' }, 2);
+                if (parts.Length < 2)
+                {
+                    continue;
+                }
+
+                switch (parts[0])
+                {
+                    case "username":
+                        secret.Username = parts[1];
+                        break;
+                    case "password":
+                        secret.Password = parts[1];
+                        break;
+                }
+            }
+
+            return secret;
+        }
+
+        public static void SetSecret(string applicationName, string username, string password)
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "secret-tool",
+                    Arguments = $"store --label {applicationName} --username {username} {password}",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            try
+            {
+                process.Start();
+            }
+            catch (FileNotFoundException)
+            {
+                throw new NoLibsecretException();
+            }
+
+            process.WaitForExit();
+        }
+
+        public static void DeleteSecret(string applicationName)
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "secret-tool",
+                    Arguments = $"clear {applicationName}",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            try
+            {
+                process.Start();
+            }
+            catch (FileNotFoundException)
+            {
+                throw new NoLibsecretException();
+            }
+
+            process.WaitForExit();
+        }
+
+        internal sealed class Secret
+        {
+            public string Username { get; set; }
+            public string Password { get; set; }
+        }
+
+        public class NoLibsecretException : Exception
+        {
+            public NoLibsecretException()
+            {
+                new Exception("LiveSplit on Linux needs libsecret - tools and libsecret - common installed from your package manager.");
             }
         }
-
-        var credential = new CREDENTIAL
-        {
-            AttributeCount = 0,
-            Attributes = IntPtr.Zero,
-            Comment = IntPtr.Zero,
-            TargetAlias = IntPtr.Zero,
-            Type = CredentialType.Generic,
-            Persist = (uint)CredentialPersistence.LocalMachine,
-            CredentialBlobSize = (uint)(byteArray == null ? 0 : byteArray.Length),
-            TargetName = Marshal.StringToCoTaskMemUni(applicationName),
-            CredentialBlob = Marshal.StringToCoTaskMemUni(secret),
-            UserName = Marshal.StringToCoTaskMemUni(userName ?? Environment.UserName)
-        };
-
-        bool written = CredWrite(ref credential, 0);
-        Marshal.FreeCoTaskMem(credential.TargetName);
-        Marshal.FreeCoTaskMem(credential.CredentialBlob);
-        Marshal.FreeCoTaskMem(credential.UserName);
-
-        if (!written)
-        {
-            int lastError = Marshal.GetLastWin32Error();
-            throw new Exception(string.Format("CredWrite failed with the error code {0}.", lastError));
-        }
     }
-
-    public static bool CredentialExists(string applicationName)
-    {
-        return ReadCredential(applicationName) != null;
-    }
-
-    public static void DeleteCredential(string applicationName)
-    {
-        if (applicationName == null)
-        {
-            throw new ArgumentNullException(nameof(applicationName));
-        }
-
-        if (!CredentialExists(applicationName))
-        {
-            return;
-        }
-
-        bool success = CredDelete(applicationName, CredentialType.Generic, 0);
-        if (!success)
-        {
-            int lastError = Marshal.GetLastWin32Error();
-            throw new Win32Exception(lastError);
-        }
-    }
-
-    [DllImport("Advapi32.dll", EntryPoint = "CredReadW", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern bool CredRead(string target, CredentialType type, int reservedFlag, out IntPtr credentialPtr);
-
-    [DllImport("Advapi32.dll", EntryPoint = "CredDeleteW", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern bool CredDelete(string target, CredentialType type, int reservedFlag);
-
-    [DllImport("Advapi32.dll", EntryPoint = "CredWriteW", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern bool CredWrite([In] ref CREDENTIAL userCredential, [In] uint flags);
-
-    [DllImport("Advapi32.dll", EntryPoint = "CredFree", SetLastError = true)]
-    private static extern bool CredFree([In] IntPtr cred);
-
-    private enum CredentialPersistence : uint
-    {
-        Session = 1,
-        LocalMachine,
-        Enterprise
-    }
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct CREDENTIAL
-    {
-        public uint Flags;
-        public CredentialType Type;
-        public IntPtr TargetName;
-        public IntPtr Comment;
-        public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
-        public uint CredentialBlobSize;
-        public IntPtr CredentialBlob;
-        public uint Persist;
-        public uint AttributeCount;
-        public IntPtr Attributes;
-        public IntPtr TargetAlias;
-        public IntPtr UserName;
-    }
-
-    private sealed class CriticalCredentialHandle : CriticalHandleZeroOrMinusOneIsInvalid
-    {
-        public CriticalCredentialHandle(IntPtr preexistingHandle)
-        {
-            SetHandle(preexistingHandle);
-        }
-
-        public CREDENTIAL GetCredential()
-        {
-            if (!IsInvalid)
-            {
-                var credential = (CREDENTIAL)Marshal.PtrToStructure(handle, typeof(CREDENTIAL));
-                return credential;
-            }
-
-            throw new InvalidOperationException("Invalid CriticalHandle!");
-        }
-
-        protected override bool ReleaseHandle()
-        {
-            if (!IsInvalid)
-            {
-                CredFree(handle);
-                SetHandleAsInvalid();
-                return true;
-            }
-
-            return false;
-        }
-    }
+    #endregion
 }
 
 public enum CredentialType
