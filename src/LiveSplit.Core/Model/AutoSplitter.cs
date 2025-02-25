@@ -22,7 +22,7 @@ public class AutoSplitter : ICloneable
     public IEnumerable<string> Games { get; set; }
     public bool IsActivated => Component != null;
     public List<string> URLs { get; set; }
-    public string LocalPath => Path.GetFullPath(Path.Combine(ComponentManager.BasePath ?? "", ComponentManager.PATH_COMPONENTS, FileName));
+    public string LocalPath => Path.GetFullPath(Path.Combine(ComponentManager.RuntimePath, ComponentManager.ComponentsFolder, FileName));
     public string FileName => URLs.First()[(URLs.First().LastIndexOf('/') + 1)..];
     public AutoSplitterType Type { get; set; }
     public bool ShowInLayoutEditor { get; set; }
@@ -74,8 +74,8 @@ public class AutoSplitter : ICloneable
         {
             string fileName = url[(url.LastIndexOf('/') + 1)..];
             string tempFileName = fileName + "-temp";
-            string localPath = Path.GetFullPath(Path.Combine(ComponentManager.BasePath ?? "", ComponentManager.PATH_COMPONENTS, fileName));
-            string tempLocalPath = Path.GetFullPath(Path.Combine(ComponentManager.BasePath ?? "", ComponentManager.PATH_COMPONENTS, tempFileName));
+            string localPath = Path.Combine(ComponentManager.RuntimePath, ComponentManager.ComponentsFolder, fileName);
+            string tempLocalPath = Path.Combine(ComponentManager.RuntimePath, ComponentManager.ComponentsFolder, tempFileName);
 
             try
             {

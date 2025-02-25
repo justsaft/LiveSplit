@@ -10,8 +10,8 @@ namespace LiveSplit.UI.Components;
 
 public class ComponentManager
 {
-    public const string PATH_COMPONENTS = "Components\\";
-    public static string BasePath { get; set; }
+    public static readonly string RuntimePath = Path.GetFullPath(Directory.GetCurrentDirectory());
+    public static readonly string ComponentsFolder = @"Components/";
     public static IDictionary<string, IComponentFactory> ComponentFactories { get; protected set; }
     public static IDictionary<string, IRaceProviderFactory> RaceProviderFactories { get; set; }
 
@@ -39,7 +39,7 @@ public class ComponentManager
 
     public static IDictionary<string, T> LoadAllFactories<T>()
     {
-        string path = Path.GetFullPath(Path.Combine(BasePath ?? "", PATH_COMPONENTS));
+        string path = Path.Combine(RuntimePath, ComponentsFolder);
         return Directory
             .EnumerateFiles(path, "*.dll")
             .Select(x =>
