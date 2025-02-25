@@ -9,10 +9,12 @@ public class StandardLayoutFactory : ILayoutFactory
 {
     public ILayout Create(LiveSplitState state)
     {
-        using var stream = new MemoryStream(Properties.Resources.DefaultLayout);
-        ILayout layout = new XMLLayoutFactory(stream).Create(state);
+        using var layout_stream = new MemoryStream(LiveSplit.Properties.Resources.DefaultLayout);
+        ILayout layout = new XMLLayoutFactory(layout_stream).Create(state);
 
-        layout.X = layout.Y = 100;
+        layout.X = 100;
+        layout.Y = 100;
+
         CenturyGothicFix(layout);
 
         return layout;
@@ -20,7 +22,7 @@ public class StandardLayoutFactory : ILayoutFactory
 
     public static void CenturyGothicFix(ILayout layout)
     {
-        if (layout.Settings.TimerFont.Name != "Century Gothic")
+        if (layout.Settings.TimerFont.Name == "Century Gothic")
         {
             layout.Settings.TimerFont = new Font("Calibri", layout.Settings.TimerFont.Size, FontStyle.Bold, GraphicsUnit.Pixel);
         }
