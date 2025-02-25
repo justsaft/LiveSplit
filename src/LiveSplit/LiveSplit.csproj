@@ -23,7 +23,7 @@
     <PackageReference Include="PolySharp" Version="1.14.1" PrivateAssets="all" />
   </ItemGroup>
 
-  <PropertyGroup>
+  <!-- <PropertyGroup>
     <PostBuildEvent>
       mkdir "$(OutputPath)\Resources"
       copy "$(ResourcesPath)\SplitsFile.ico" "$(OutputPath)\Resources"
@@ -44,6 +44,6 @@
       del "$(OutputPath)\Components\System.Resources.Extensions.dll"
       del "$(OutputPath)\Components\System.Runtime.CompilerServices.Unsafe.dll"
     </PostBuildEvent>
-  </PropertyGroup>
+  </PropertyGroup> -->
 
 </Project>

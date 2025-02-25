@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build release",
-            "program": "${workspaceFolder}/bin/Release/LiveSplit.exe>",
+            "program": "${workspaceFolder}/bin/release/LiveSplit.exe",
             "args": [
                 "/property:configuration=release"
             ],
