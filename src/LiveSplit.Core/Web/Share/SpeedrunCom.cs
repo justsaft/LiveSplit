@@ -12,14 +12,54 @@ namespace LiveSplit.Web.Share;
 
 public static class SpeedrunCom
 {
-    public static SpeedrunComClient Client { get; private set; }
+    public static SpeedrunComClient Client => _client.Value;
+    //public static SpeedrunComClient SRcomClient { get; private set; }
 
     public static ISpeedrunComAuthenticator Authenticator { private get; set; }
 
-    static SpeedrunCom()
+    // Lazy initialization for the SRcomClient
+    private static readonly Lazy<SpeedrunComClient> _client = new(() =>
+        {
+            string userAgent = Updates.UpdateHelper.UserAgent;
+            string accessToken = WebCredentials.SpeedrunComAccessToken;
+#if DEBUG
+            if (string.IsNullOrEmpty(userAgent))
+            {
+                Log.Error("UserAgent is not initialized.");
+                throw new InvalidOperationException("UserAgent is not initialized.");
+            }
+
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                Log.Error("AccessToken is not initialized.");
+                throw new InvalidOperationException("AccessToken is not initialized.");
+            }
+#endif
+            try
+            {
+                return new SpeedrunComClient(userAgent, accessToken);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Failed to initialize SpeedrunComClient: " + ex.Message);
+                throw;
+            }
+        });
+
+    // Not lazy method
+    /* static SpeedrunCom()
     {
-        Client = new SpeedrunComClient(Updates.UpdateHelper.UserAgent, WebCredentials.SpeedrunComAccessToken);
-    }
+        try
+        {
+            SRcomClient = new SpeedrunComClient(Updates.UpdateHelper.UserAgent, WebCredentials.SpeedrunComAccessToken);
+        }
+        catch (Exception ex)
+        {
+            // Log the exception details for debugging
+            Log.Error("Failed to initialize SpeedrunComClient: " + ex.Message);
+            throw;
+        }
+    } */
 
     public static bool MakeSureUserIsAuthenticated()
     {
@@ -68,6 +108,7 @@ public static class SpeedrunCom
 
         return time;
     }
+
     public static IRun GetRun(this SpeedrunComSharp.Run record)
     {
         string apiUri = record.SplitsUri.AbsoluteUri;
@@ -79,8 +120,13 @@ public static class SpeedrunCom
     {
         return timingMethod switch
         {
-            SpeedrunComSharp.TimingMethod.RealTime => Model.TimingMethod.RealTime,
-            SpeedrunComSharp.TimingMethod.GameTime or SpeedrunComSharp.TimingMethod.RealTimeWithoutLoads => Model.TimingMethod.GameTime,
+            SpeedrunComSharp.TimingMethod.RealTime
+                => Model.TimingMethod.RealTime,
+
+            SpeedrunComSharp.TimingMethod.GameTime
+                or SpeedrunComSharp.TimingMethod.RealTimeWithoutLoads
+                => Model.TimingMethod.GameTime,
+
             _ => throw new ArgumentException("timingMethod"),
         };
     }
