@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Linq;
 
+using System.Windows.Forms;
+
 using LiveSplit.Model.Input;
 using LiveSplit.Options;
 using LiveSplit.UI;
 
-using Forms = System.Windows.Forms;
+// using Forms = System.Windows.Forms;
 
 namespace LiveSplit.Model;
 
@@ -13,9 +15,9 @@ public class LiveSplitState : ICloneable
 {
     public IRun Run { get; set; }
     public ILayout Layout { get; set; }
-    public LayoutSettings LayoutSettings { get; set; }
+    public LiveSplit.Options.LayoutSettings LayoutSettings { get; set; }
     public ISettings Settings { get; set; }
-    public Forms.Form Form { get; set; }
+    public Form Form { get; set; }
 
     public AtomicDateTime AttemptStarted { get; set; }
     public AtomicDateTime AttemptEnded { get; set; }
@@ -58,22 +60,22 @@ public class LiveSplitState : ICloneable
             }
         }
     }
-    private bool isGameTimePaused;
+    private bool _isGameTimePaused;
     public bool IsGameTimePaused
     {
-        get => isGameTimePaused;
+        get => _isGameTimePaused;
         set
         {
-            if (!value && isGameTimePaused)
+            if (!value && _isGameTimePaused)
             {
                 LoadingTimes = CurrentTime.RealTime.Value - (CurrentTime.GameTime ?? CurrentTime.RealTime.Value);
             }
-            else if (value && !isGameTimePaused)
+            else if (value && !_isGameTimePaused)
             {
                 GameTimePauseTime = CurrentTime.GameTime ?? CurrentTime.RealTime;
             }
 
-            isGameTimePaused = value;
+            _isGameTimePaused = value;
         }
     }
 
@@ -170,9 +172,19 @@ public class LiveSplitState : ICloneable
     public int CurrentSplitIndex { get; set; }
     public ISegment CurrentSplit => (CurrentSplitIndex >= 0 && CurrentSplitIndex < Run.Count) ? Run[CurrentSplitIndex] : null;
 
-    private LiveSplitState() { }
+    private LiveSplitState()
+    {
+        /* Run = null;
+        Form = null;
+        Layout = null;
+        Settings = null;
+        LayoutSettings = null;
+        AdjustedStartTime = null;
+        CurrentPhase = TimerPhase.NotRunning;
+        CurrentSplitIndex = -1; */
+    }
 
-    public LiveSplitState(IRun run, Forms.Form form, ILayout layout, LayoutSettings layoutSettings, ISettings settings)
+    public LiveSplitState(IRun run, Form form, ILayout layout, LiveSplit.Options.LayoutSettings layoutSettings, ISettings settings)
     {
         Run = run;
         Form = form;
@@ -192,13 +204,13 @@ public class LiveSplitState : ICloneable
             Form = Form,
             Layout = Layout.Clone() as ILayout,
             Settings = Settings.Clone() as ISettings,
-            LayoutSettings = LayoutSettings.Clone() as LayoutSettings,
+            LayoutSettings = LayoutSettings.Clone() as LiveSplit.Options.LayoutSettings,
             AdjustedStartTime = AdjustedStartTime,
             StartTimeWithOffset = StartTimeWithOffset,
             StartTime = StartTime,
             TimePausedAt = TimePausedAt,
             GameTimePauseTime = GameTimePauseTime,
-            isGameTimePaused = isGameTimePaused,
+            _isGameTimePaused = _isGameTimePaused,
             LoadingTimes = LoadingTimes,
             CurrentPhase = CurrentPhase,
             CurrentSplitIndex = CurrentSplitIndex,
