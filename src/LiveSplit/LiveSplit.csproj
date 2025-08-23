@@ -22,7 +22,7 @@
     <PackageReference Include="PolySharp" Version="1.14.1" PrivateAssets="all" />
   </ItemGroup>
 
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <PostBuildEvent>
       mkdir "$(OutputPath)\Resources"
       copy "$(ResourcesPath)\SplitsFile.ico" "$(OutputPath)\Resources"
@@ -42,6 +42,29 @@
       del "$(OutputPath)\Components\System.Numerics.Vectors.dll"
       del "$(OutputPath)\Components\System.Resources.Extensions.dll"
       del "$(OutputPath)\Components\System.Runtime.CompilerServices.Unsafe.dll"
+    </PostBuildEvent>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+    <PostBuildEvent>
+      mkdir "$(OutputPath)/Resources"
+      cp "$(ResourcesPath)/SplitsFile.ico" "$(OutputPath)/Resources"
+      cp "$(ResourcesPath)/LayoutFile.ico" "$(OutputPath)/Resources"
+      rm -r "$(OutputPath)/runtimes"
+      rm "$(OutputPath)/Microsoft.WindowsAPICodePack.ExtendedLinguisticServices.dll"
+      rm "$(OutputPath)/Microsoft.WindowsAPICodePack.Sensors.dll"
+      rm "$(OutputPath)/Microsoft.WindowsAPICodePack.ShellExtensions.dll"
+      rm "$(OutputPath)/x64/asr_capi.dll"
+      rm "$(OutputPath)/x86/asr_capi.dll"
+      rm "$(OutputPath)/Components/SpeedrunComSharp.dll"
+      rm "$(OutputPath)/Components/CustomFontDialog.dll"
+      rm "$(OutputPath)/Components/CustomFontDialog.dll.config"
+      rm "$(OutputPath)/Components/WinFormsColor.dll"
+      rm "$(OutputPath)/Components/System.Buffers.dll"
+      rm "$(OutputPath)/Components/System.Memory.dll"
+      rm "$(OutputPath)/Components/System.Numerics.Vectors.dll"
+      rm "$(OutputPath)/Components/System.Resources.Extensions.dll"
+      rm "$(OutputPath)/Components/System.Runtime.CompilerServices.Unsafe.dll"
     </PostBuildEvent>
   </PropertyGroup>
 

@@ -41,7 +41,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
 
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <PreBuildEvent>
       mkdir "$(MSBuildProjectDirectory)\Updates\GitInfo\."
       where git
@@ -55,6 +55,15 @@
         touch "$(MSBuildProjectDirectory)\Updates\GitInfo\revision.txt"
       )
       EXIT 0
+    </PreBuildEvent>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+    <PreBuildEvent>
+      mkdir -p "$(MSBuildProjectDirectory)/Updates/GitInfo"
+      git describe --dirty --always --long --tags &gt; "$(MSBuildProjectDirectory)/Updates/GitInfo/version.txt"
+      git rev-parse --abbrev-ref HEAD &gt; "$(MSBuildProjectDirectory)/Updates/GitInfo/branch.txt"
+      git rev-parse HEAD &gt; "$(MSBuildProjectDirectory)/Updates/GitInfo/revision.txt"
     </PreBuildEvent>
   </PropertyGroup>
 
