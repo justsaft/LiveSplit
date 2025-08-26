@@ -47,7 +47,7 @@
 
   <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
     <PostBuildEvent>
-      mkdir "$(OutputPath)/Resources"
+      mkdir -p "$(OutputPath)/Resources"
       cp "$(ResourcesPath)/SplitsFile.ico" "$(OutputPath)/Resources"
       cp "$(ResourcesPath)/LayoutFile.ico" "$(OutputPath)/Resources"
       rm -r "$(OutputPath)/runtimes"
